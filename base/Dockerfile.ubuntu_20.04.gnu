@@ -26,7 +26,5 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 
 RUN useradd -ms /bin/bash builder
 WORKDIR /home/builder
-
 USER builder
-
 CMD ["/bin/bash"]
