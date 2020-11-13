@@ -1,0 +1,20 @@
+name: Build ubuntu
+on: [push, pull_request]
+
+jobs:
+  job_1:
+    name: create ubuntu base
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: build image
+      run: docker build -t ubuntubase -f base/Dockerfile.ubuntu_20.04.gnu .
+
+    - name: push image
+      run: |
+        echo "${{ secrets.DOCKERHUB_PASSWORD }}" \
+        | docker login -u noaaemc --password-stdin
+        docker tag ubuntubase noaaemc/ubuntu-base:v1
+        docker push noaaemc/ubuntu-base:v1
