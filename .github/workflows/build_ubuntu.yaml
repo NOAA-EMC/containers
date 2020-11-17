@@ -40,7 +40,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: push base image
+    - name: push hpc image
       run: |
         docker tag ubuntuhpc noaaemc/ubuntu-hpc:v1
         docker push noaaemc/ubuntu-hpc:v1
