@@ -12,6 +12,17 @@ jobs:
     - name: build base image
       run: docker build -t ubuntubase -f base/Dockerfile.ubuntu_20.04.gnu .
 
+    - name: login to dockerhub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: push base image
+      run: |
+        docker tag ubuntubase noaaemc/ubuntu-base:v1
+        docker push noaaemc/ubuntu-base:v1
+
   app:
     name: create hpc container for ufs weather app
     needs: base
@@ -22,3 +33,14 @@ jobs:
 
     - name: build hpc image
       run: docker build -t ubuntuhpc -f app/Dockerfile.hpc.ubuntu_20.04.gnu .
+
+    - name: login to dockerhub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: push hpc image
+      run: |
+        docker tag ubuntuhpc noaaemc/ubuntu-hpc:v1
+        docker push noaaemc/ubuntu-hpc:v1
