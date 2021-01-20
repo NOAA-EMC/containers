@@ -15,7 +15,7 @@ RUN apt-get update -y && \
     intel-oneapi-common-licensing \
     intel-oneapi-common-vars \
     intel-oneapi-dev-utilities \
-    intel-oneapi-dpcpp-cpp-compiler-pro \
+    intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic \
     intel-oneapi-ifort \
     intel-oneapi-inspector \
     intel-oneapi-itac \
