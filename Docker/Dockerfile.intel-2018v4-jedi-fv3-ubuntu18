@@ -1,0 +1,124 @@
+# syntax=docker/dockerfile:experimental
+FROM intel-2018v4-hpc-stack-jedi:ubuntu18
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
+        bc \
+        bison \
+        build-essential \
+        byacc \
+        csh \
+        curl \
+        dirmngr \
+        doxygen \
+        emacs \
+        file \
+        flex \
+        git \
+        git-flow \
+        gnupg2 \
+        graphviz \
+        ksh \
+        less \
+        libasound2 \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libncurses5-dev \
+        libexpat1-dev \
+        libgtk2.0-common \
+        liblz4-dev \
+        libncurses-dev \
+        libpango-1.0.0 \
+        libsnappy-dev \
+        libssl-dev \
+        libx11-dev \
+        libxml2-dev \
+        linux-headers-aws \
+        lsb-release \
+        lynx \
+        make \
+        man-db \
+        nano \
+        nedit \
+        openssh-client \
+        openssh-server \
+        screen \
+        software-properties-common \
+        swig \
+        tcl \
+        tcsh \
+        texinfo \
+        texlive-latex-recommended \
+        tk \
+        unzip \
+        wget \
+        wish \
+        xserver-xorg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download public key for github.com
+RUN mkdir -p -m 0600 ~/.ssh && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+RUN git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git-lfs && \
+    git lfs install
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3-dev \
+        python3-pip \
+        python3-scipy \
+        python3-yaml && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /usr/bin/python && \
+    ln -s /usr/bin/python3.6 /usr/bin/python
+
+ENV CMAKE_C_COMPILER=mpiicc \
+    CMAKE_CXX_COMPILER=mpiicpc \
+    CMAKE_Fortran_COMPILER=mpiifort \
+    CMAKE_Platform=linux.intel \
+    CMAKE_PREFIX_PATH=/home/builder/opt \
+    ESMFMKFILE=/home/builder/opt/lib/esmf.mk \
+    NETCDF=/home/builder/opt \
+    CC=mpiicc \
+    CXX=mpiicpc \
+    FC=mpiifort \
+    MPI_CC=mpiicc \
+    MPI_CXX=mpiicpc \
+    MPI_FC=mpiifort \
+    SERIAL_CC=icc \
+    SERIAL_CXX=icpc \
+    SERIAL_FC=ifort
+
+# build fv3-bundle
+RUN --mount=type=ssh,id=github_ssh_key . /etc/profile && \
+    mkdir -p /home/builder/opt/jedi && \
+    cd /home/builder/opt/jedi && \
+    git clone git@github.com:jcsda/fv3-bundle.git && \
+    git clone git@github.com:JCSDA-internal/saber.git -b develop fv3-bundle/saber && \
+    git clone git@github.com:JCSDA-internal/fckit.git -b develop fv3-bundle/fckit && \
+    git clone git@github.com:JCSDA-internal/crtm.git -b develop fv3-bundle/crtm && \
+    git clone git@github.com:JCSDA-internal/oops.git -b develop fv3-bundle/oops && \
+    git clone git@github.com:JCSDA-internal/ioda.git -b develop fv3-bundle/ioda && \
+    git clone git@github.com:JCSDA-internal/ufo.git -b develop fv3-bundle/ufo && \
+    git clone git@github.com:JCSDA-internal/femps.git -b develop fv3-bundle/femps && \
+    git clone git@github.com:JCSDA-internal/fv3-jedi-linearmodel.git -b develop fv3-bundle/fv3-jedi-lm && \
+    git clone git@github.com:JCSDA-internal/fv3-jedi.git -b develop fv3-bundle/fv3-jedi && \
+    sed -e '/PROJECT eckit/s/^/#/g' -i /home/builder/opt/jedi/fv3-bundle/CMakeLists.txt && \
+    mkdir -p /home/builder/opt/jedi/build && \
+    cd /home/builder/opt/jedi/build && \
+    export PATH=/home/builder/opt/bin:$PATH && \
+    export LD_LIBRARY_PATH=/home/builder/opt/lib:$LD_LIBRARY_PATH && \
+    export LIBRARY_PATH=/home/builder/opt/lib:$LIBRARY_PATH && \
+    export PYTHONPATH=/home/builder/opt/lib:$PYTHONPATH && \
+    ecbuild --build=Release ../fv3-bundle && \
+    make -j4 && \
+    cd /home/builder/opt/jedi && chmod -R 777 .
+
+CMD ["/bin/bash" , "-l"]

@@ -1,0 +1,113 @@
+# syntax=docker/dockerfile:experimental
+FROM intel-2018v4-hpc-stack-jedi:ubuntu18
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
+        bc \
+        bison \
+        build-essential \
+        byacc \
+        csh \
+        curl \
+        dirmngr \
+        doxygen \
+        emacs \
+        file \
+        flex \
+        git \
+        git-flow \
+        gnupg2 \
+        graphviz \
+        ksh \
+        less \
+        libasound2 \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libncurses5-dev \
+        libexpat1-dev \
+        libgtk2.0-common \
+        liblz4-dev \
+        libncurses-dev \
+        libpango-1.0.0 \
+        libsnappy-dev \
+        libssl-dev \
+        libx11-dev \
+        libxml2-dev \
+        linux-headers-aws \
+        lsb-release \
+        lynx \
+        make \
+        man-db \
+        nano \
+        nedit \
+        openssh-client \
+        openssh-server \
+        screen \
+        software-properties-common \
+        swig \
+        tcl \
+        tcsh \
+        texinfo \
+        texlive-latex-recommended \
+        tk \
+        unzip \
+        wget \
+        wish \
+        xserver-xorg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download public key for github.com
+RUN mkdir -p -m 0600 ~/.ssh && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+
+RUN git config --global url.ssh://git@github.com/.insteadOf https://github.com/
+
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git-lfs && \
+    git lfs install
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3-dev \
+        python3-pip \
+        python3-scipy \
+        python3-yaml && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /usr/bin/python && \
+    ln -s /usr/bin/python3.6 /usr/bin/python
+
+ENV CMAKE_C_COMPILER=mpiicc \
+    CMAKE_CXX_COMPILER=mpiicpc \
+    CMAKE_Fortran_COMPILER=mpiifort \
+    CMAKE_Platform=linux.intel \
+    CMAKE_PREFIX_PATH=/home/builder/opt \
+    ESMFMKFILE=/home/builder/opt/lib/esmf.mk \
+    NETCDF=/home/builder/opt \
+    CC=mpiicc \
+    CXX=mpiicpc \
+    FC=mpiifort \
+    MPI_CC=mpiicc \
+    MPI_CXX=mpiicpc \
+    MPI_FC=mpiifort \
+    SERIAL_CC=icc \
+    SERIAL_CXX=icpc \
+    SERIAL_FC=ifort
+
+RUN --mount=type=ssh,id=github_ssh_key cd /home/builder/opt && \
+    source /opt/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64 && \
+    export PATH=/home/builder/opt/bin:$PATH && \
+    export LD_LIBRARY_PATH=/home/builder/opt/lib:$LD_LIBRARY_PATH && \
+    export LIBRARY_PATH=/home/builder/opt/lib:$LIBRARY_PATH && \
+    export PYTHONPATH=/home/builder/opt/lib:$PYTHONPATH && \
+    git clone git@github.com:JCSDA-internal/soca-science.git && \
+    cd /home/builder/opt/soca-science && \
+    git checkout release/benchmark && \
+    mkdir -p build && cd build && \
+    ecbuild -DMPIEXEC_EXECUTABLE=mpiexec -DMPIEXEC_NUMPROC_FLAG="-n" -DBUILD_ECKIT=ON -DBUILD_CRTM=ON -DBUILD_FV3JEDI=ON /home/builder/opt/soca-science/bundle && \
+    make update && \
+    cd /home/builder/opt/soca-science/build/soca && \
+    make -j4

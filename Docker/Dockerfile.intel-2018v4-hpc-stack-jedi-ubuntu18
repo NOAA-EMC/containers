@@ -1,0 +1,50 @@
+FROM intel-2018v4-base:ubuntu18
+
+SHELL ["/bin/bash", "-c"]
+
+RUN rm -f /usr/bin/gmake && \
+    ln -s /usr/bin/make /usr/bin/gmake
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1
+
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
+        build-essential \
+        ca-certificates \
+        curl \
+        file \
+        git \
+        gnupg \
+        libexpat1-dev \
+        libssl-dev \
+        libc-bin \
+        m4 \
+        pkg-config \
+        python \
+        vim \
+        texinfo \
+        wget && \
+    rm -rf /var/lib/apt/lists/*
+    
+
+ENV I_MPI_THREAD_SPLIT=1
+ENV I_MPI_LIBRARY_KIND='release_mt'
+
+RUN . /etc/profile && \
+    mkdir -p /home/builder/opt && \
+    cd /home/builder/opt && \
+    git clone https://github.com/NOAA-EMC/hpc-stack.git && \
+    cd hpc-stack && \
+    ./build_stack.sh -p /home/builder/opt -c config/config_linux_ubuntu18_intel_2018v4.sh -y config/stack_jedi.yaml && \
+    cd .. && \
+    rm -rf hpc-stack
+
+RUN echo 'export PATH=/home/builder/opt/bin:$PATH'      >> /etc/bash.bashrc && \
+    echo 'export LD_LIBRARY_PATH=/home/builder/opt/lib:$LD_LIBRARY_PATH' >> /etc/bash.bashrc && \
+    echo 'export CMAKE_PREFIX_PATH=/home/builder/opt'   >> /etc/bash.bashrc && \
+    echo 'export FC=mpiifort' >> /etc/bash.bashrc && \
+    echo 'export CC=mpiicc'   >> /etc/bash.bashrc && \
+    echo 'export CXX=mpiicpc' >> /etc/bash.bashrc
+
+WORKDIR /home/builder
