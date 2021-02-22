@@ -1,2 +1,2 @@
-# emc-containers
-Container recipes for EMC applications
+# Containers
+Container recipes for applications
