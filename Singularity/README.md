@@ -1,7 +1,7 @@
 # Singularity Container Development Instructions
 ------------------------------------
 
-# Install Singularity
+## Install Singularity
 Now if you haven't already done so, install Singularity.  The `singularity` binary must be built by `go`, so `go` must be installed first.
 
 1. Install Singularity dependencies.
