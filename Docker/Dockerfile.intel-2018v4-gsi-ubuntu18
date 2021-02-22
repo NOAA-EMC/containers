@@ -1,0 +1,287 @@
+# syntax=docker/dockerfile:experimental
+FROM intel-2018v4-hpc-stack-jedi:ubuntu18
+
+SHELL ["/bin/bash", "-c"]
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o=Dpkg::Use-Pty=0 \
+        bc \
+        bison \
+        build-essential \
+        byacc \
+        csh \
+        curl \
+        dirmngr \
+        doxygen \
+        emacs \
+        file \
+        flex \
+        git \
+        git-flow \
+        gnupg2 \
+        graphviz \
+        ksh \
+        less \
+        libasound2 \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libncurses5-dev \
+        libexpat1-dev \
+        libgtk2.0-common \
+        liblz4-dev \
+        libncurses-dev \
+        libpango-1.0.0 \
+        libsnappy-dev \
+        libssl-dev \
+        libx11-dev \
+        libxml2-dev \
+        linux-headers-aws \
+        lsb-release \
+        lynx \
+        make \
+        man-db \
+        nano \
+        nedit \
+        openssh-client \
+        openssh-server \
+        screen \
+        software-properties-common \
+        swig \
+        tcl \
+        tcsh \
+        texinfo \
+        texlive-latex-recommended \
+        tk \
+        unzip \
+        wget \
+        wish \
+        xserver-xorg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download public key for github.com
+RUN mkdir -p -m 0600 ~/.ssh && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts && \
+    ssh-keyscan -p 29418 vlab.ncep.noaa.gov 2> /dev/null >> ~/.ssh/known_hosts
+
+RUN curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git-lfs && \
+    git lfs install
+
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3-dev \
+        python3-pip \
+        python3-scipy \
+        python3-yaml && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /usr/bin/python && \
+    ln -s /usr/bin/python3.6 /usr/bin/python
+
+ENV LIBSrnr=/home/builder/opt
+
+RUN --mount=type=ssh,id=github_ssh_key --mount=type=secret,id=gerrit_user,dst=/tmp/gerrit_user.txt . /etc/profile && \
+    mkdir -p /home/builder/opt && \
+    cd /home/builder/opt && \
+    GERRIT_USER=$(cat /tmp/gerrit_user.txt) && \
+    git config --global url.ssh://git@github.com/.insteadOf https://github.com/ && \
+    git config --global url.ssh://${GERRIT_USER}@vlab.ncep.noaa.gov:29418/.insteadOf gerrit: && \
+    git clone git@github.com:NOAA-EMC/GSI.git && \
+    cd /home/builder/opt/GSI && \
+    export CMAKE_C_COMPILER=mpiicc && \
+    export CMAKE_CXX_COMPILER=mpiicpc && \
+    export CMAKE_Fortran_COMPILER=mpiifort && \
+    export CMAKE_Platform=linux.intel && \
+    export CMAKE_PREFIX_PATH=${LIBSrnr} && \
+    export ESMFMKFILE=${LIBSrnr}/lib/esmf.mk && \
+    export NETCDF=${LIBSrnr} && \
+    export CC=mpiicc && \
+    export CXX=mpiicpc && \
+    export FC=mpiifort && \
+    export MPI_CC=mpiicc && \
+    export MPI_CXX=mpiicpc && \
+    export MPI_FC=mpiifort && \
+    export SERIAL_CC=icc && \
+    export SERIAL_CXX=icpc && \
+    export SERIAL_FC=ifort && \
+    export bacio_ROOT=${LIBSrnr} && \
+    export BACIO=${LIBSrnr} && \
+    export bacio_VERSION=2.4.1 && \
+    export BACIO_INC4=${LIBSrnr}/include_4 && \
+    export BACIO_LIB4=${LIBSrnr}/lib/libbacio_4.a && \
+    export BACIO_INC8=${LIBSrnr}/include_8 && \
+    export BACIO_LIB8=${LIBSrnr}/lib/libbacio_8.a && \
+    export bufr_ROOT=${LIBSrnr} && \
+    export bufr_VERSION=11.4.0 && \
+    export BUFR_INC4=${LIBSrnr}/include_4 && \
+    export BUFR_INC8=${LIBSrnr}/include_8 && \
+    export BUFR_INCd=${LIBSrnr}/include_d && \
+    export BUFR_INC4_DA=${LIBSrnr}/include_4_DA && \
+    export BUFR_INC8_DA=${LIBSrnr}/include_8_DA && \
+    export BUFR_INCd_DA=${LIBSrnr}/include_d_DA && \
+    export BUFR_LIB4=${LIBSrnr}/lib/libbufr_4.a && \
+    export BUFR_LIB8=${LIBSrnr}/lib/libbufr_8.a && \
+    export BUFR_LIBd=${LIBSrnr}/lib/libbufr_d.a && \
+    export BUFR_LIB4_DA=${LIBSrnr}/lib/libbufr_4_DA.a && \
+    export BUFR_LIB8_DA=${LIBSrnr}/lib/libbufr_8_DA.a && \
+    export BUFR_LIBd_DA=${LIBSrnr}/lib/libbufr_d_DA.a && \
+    export crtm_ROOT=${LIBSrnr} && \
+    export crtm_VERSION=2.3.0 && \
+    export CRTM=${LIBSrnr} && \
+    export CRTM_DIR=${LIBSrnr} && \
+    export CRTM_LIB=${LIBSrnr}/lib/libcrtm.a && \
+    export CRTM_INC=${LIBSrnr}/include && \
+    export ESMF_BIN=${LIBSrnr}/bin && \
+    export ESMF_DIR=${LIBSrnr} && \
+    export ESMF_INC=${LIBSrnr}/include && \
+    export ESMF_INCLUDES=${LIBSrnr}/include && \
+    export ESMF_LIB=${LIBSrnr}/lib && \
+    export ESMF_LIBRARIES=${LIBSrnr}/lib && \
+    export ESMF_MOD=${LIBSrnr}/mod && \
+    export ESMF_PATH=${LIBSrnr} && \
+    export ESMF_ROOT=${LIBSrnr} && \
+    export ESMF_VERSION=8_1_0_beta_snapshot_27 && \
+    export ESMFMKFILE=${LIBSrnr}/lib/esmf.mk && \
+    export G2_INC4=${LIBSrnr}/include_4 && \
+    export G2_INCd=${LIBSrnr}/include_d && \
+    export G2_LIB4=${LIBSrnr}/lib/libg2_4.a && \
+    export G2_LIBd=${LIBSrnr}/lib/libg2_d.a && \
+    export g2_ROOT=${LIBSrnr} && \
+    export g2_VERSION=3.4.1 && \
+    export G2TMPL_INC=/${LIBSrnr}/include && \
+    export G2TMPL_LIB=/${LIBSrnr}/lib/libg2tmpl.a && \
+    export g2tmpl_ROOT=/${LIBSrnr} && \
+    export g2tmpl_VERSION=1.9.1 && \
+    export GFSIO_INC=${LIBSrnr}/include && \
+    export GFSIO_LIB=${LIBSrnr}/lib/libgfsio.a && \
+    export gfsio_ROOT=${LIBSrnr} && \
+    export gfsio_VERSION=1.4.1 && \
+    export HDF5_DIR=${LIBSrnr} && \
+    export HDF5_FFLAGS=-I${LIBSrnr}/include && \
+    export HDF5_INC=${LIBSrnr}/include && \
+    export HDF5_INCLUDE=${LIBSrnr}/include && \
+    export HDF5_INCLUDES=${LIBSrnr}/include && \
+    export HDF5_LIBRARIES=${LIBSrnr}/lib && \
+    export HDF5_VERSION=1.10.6 && \
+    export HDF5=${LIBSrnr} && \
+    export HDF5_FFLAGS="-I${LIBSrnr}/include" && \
+    export HDF5_LDFLAGS="-L${LIBSrnr}/lib -lhdf5_hl -lhdf5 -lz" && \
+    export HDF5_LDFLAGS_F="-L${LIBSrnr}/lib -lhdf5_hl -lhdf5 -lz" && \
+    export HDF5_LDFLAGS_C="-L${LIBSrnr}/lib -lhdf5_hl -lhdf5 -lz" && \
+    export IP_INC4=${LIBSrnr}/include_4 && \
+    export IP_INC8=${LIBSrnr}/include_8 && \
+    export IP_INCd=${LIBSrnr}/include_d && \
+    export IP_LIB4=${LIBSrnr}/lib/libip_4.a && \
+    export IP_LIB8=${LIBSrnr}/lib/libip_8.a && \
+    export IP_LIBd=${LIBSrnr}/lib/libip_d.a && \
+    export ip_ROOT=${LIBSrnr} && \
+    export ip_VERSION=3.3.3 && \
+    export JASPER_INCLUDES=${LIBSrnr}/include && \
+    export JASPER_LIBRARIES=${LIBSrnr}/lib64 && \
+    export Jasper_ROOT=${LIBSrnr} && \
+    export JASPER_ROOT=${LIBSrnr} && \
+    export JASPER_VERSION=2.0.15 && \
+    export NCEPPOST_INC=${LIBSrnr}/include && \
+    export NCEPPOST_LIB=${LIBSrnr}/lib/libnceppost.a && \
+    export nceppost_ROOT=${LIBSrnr} && \
+    export nceppost_VERSION=dceca26 && \
+    export NEMSIO=${LIBSrnr} && \
+    export NEMSIO_DIR=${LIBSrnr} && \
+    export NEMSIO_INC=${LIBSrnr}/include && \
+    export NEMSIO_LIB=${LIBSrnr}/lib/libnemsio.a && \
+    export nemsio_ROOT=${LIBSrnr} && \
+    nemsio_VERSION=2.5.2 && \
+    export NEMSIOGFS_INC=${LIBSrnr}/include && \
+    export NEMSIOGFS_LIB=${LIBSrnr}/lib/libnemsiogfs.a && \
+    export nemsiogfs_ROOT=${LIBSrnr} && \
+    export nemsiogfs_VERSION=2.5.3 && \
+    export NETCDF_CFLAGS="-I${LIBSrnr}/include" && \
+    export NETCDF_LDFLAGS_CXX="-L${LIBSrnr}/lib -lnetcdf -lnetcdf_c++" && \
+    export NETCDF_CXXFLAGS="-I${LIBSrnr}/include" && \
+    export NETCDF_CXX4FLAGS="-I${LIBSrnr}/include" && \
+    export NETCDF_DIR=${LIBSrnr} && \
+    export NETCDF_FFLAGS="-I${LIBSrnr}/include" && \
+    export NETCDF_INC="${LIBSrnr}/include" && \
+    export NetCDF_INCLUDES=${LIBSrnr}/include && \
+    export NETCDF_INCLUDE="-I${LIBSrnr}/include" && \
+    export NETCDF_INCLUDES=${LIBSrnr}/include && \
+    export NETCDF_LDFLAGS="-L${LIBSrnr}/lib -lnetcdff -lhdf5_hl -lhdf5 -lz" && \
+    export NETCDF_LDFLAGS_CXX4="-L${LIBSrnr}/lib -lnetcdf -lnetcdf_c++4" && \
+    export NETCDF_LDFLAGS_C="-L${LIBSrnr}/lib -lnetcdf  -lhdf5_hl -lhdf5 -lz" && \
+    export NETCDF_LDFLAGS_F="-L${LIBSrnr}/lib -lnetcdff -lhdf5_hl -lhdf5 -lz" && \
+    export NETCDF_LIB="${LIBSrnr}/lib" && \
+    export NetCDF_LIBRARIES=${LIBSrnr}/lib && \
+    export NETCDF_LIBRARIES=${LIBSrnr}/lib && \
+    export NetCDF_VERSION=4.7.4 && \
+    export NETCDF_VERSION=4.7.4 && \
+    export NetCDF=${LIBSrnr} && \
+    export NETCDF=${LIBSrnr} && \
+    export PIO_INCLUDES=${LIBSrnr}/include && \
+    export PIO_LIBRARIES=${LIBSrnr}/lib && \
+    export PIO_ROOT=${LIBSrnr} && \
+    export PIO_VERSION=2.5.1 && \
+    export PIO=${LIBSrnr} && \
+    export POST_INC=${LIBSrnr}/include && \
+    export POST_LIB=${LIBSrnr}/lib/libnceppost.a && \
+    export SFCIO_DIR=${LIBSrnr} && \
+    export SFCIO_INC=${LIBSrnr}/include && \
+    export SFCIO_INC4=${LIBSrnr}/include && \
+    export SFCIO_LIB=${LIBSrnr}/lib/libsfcio.a && \
+    export SFCIO_LIB4=${LIBSrnr}/lib/libsfcio.a && \
+    export sfcio_ROOT=${LIBSrnr} && \
+    export sfcio_VERSION=1.4.1 && \
+    export SFCIO=${LIBSrnr} && \
+    export SIGIO_DIR=${LIBSrnr} && \
+    export SIGIO_INC=${LIBSrnr}/include && \
+    export SIGIO_INC4=${LIBSrnr}/include && \
+    export SIGIO_LIB=${LIBSrnr}/lib/libsigio.a && \
+    export SIGIO_LIB4=${LIBSrnr}/lib/libsigio.a && \
+    export sigio_ROOT=${LIBSrnr} && \
+    export sigio_VERSION=2.3.2 && \
+    export SIGIO=${LIBSrnr} && \
+    export SP_INC4=${LIBSrnr}/include_4 && \
+    export SP_INC8=${LIBSrnr}/include_8 && \
+    export SP_INCd=${LIBSrnr}/include_d && \
+    export SP_LIB4=${LIBSrnr}/lib/libsp_4.a && \
+    export SP_LIB8=${LIBSrnr}/lib/libsp_8.a && \
+    export SP_LIBd=${LIBSrnr}/lib/libsp_d.a && \
+    export sp_ROOT=${LIBSrnr} && \
+    export W3EMC=${LIBSrnr} && \
+    export W3EMC_DIR=${LIBSrnr} && \
+    export W3EMC_INC4=${LIBSrnr}/include_4 && \
+    export W3EMC_INC8=${LIBSrnr}/include_8 && \
+    export W3EMC_INCd=${LIBSrnr}/include_d && \
+    export W3EMC_LIB4=${LIBSrnr}/lib/libw3emc_4.a && \
+    export W3EMC_LIB8=${LIBSrnr}/lib/libw3emc_8.a && \
+    export W3EMC_LIBd=${LIBSrnr}/lib/libw3emc_d.a && \
+    export w3emc_ROOT=${LIBSrnr} && \
+    export w3emc_VERSION=2.7.3 && \
+    export W3NCO=${LIBSrnr} && \
+    export W3NCO_DIR=${LIBSrnr} && \
+    export W3NCO_LIB4=${LIBSrnr}/lib/libw3nco_4.a && \
+    export W3NCO_LIB8=${LIBSrnr}/lib/libw3nco_8.a && \
+    export W3NCO_LIBd=${LIBSrnr}/lib/libw3nco_d.a && \
+    export w3nco_ROOT=${LIBSrnr} && \
+    export w3nco_VERSION=2.4.1 && \
+    export WRF_IO_INC=${LIBSrnr}/include && \
+    export WRF_IO_LIB=${LIBSrnr}/lib/libwrf_io.a && \
+    export wrf_io_ROOT=${LIBSrnr} && \
+    export wrf_io_VERSION=1.1.1 && \
+    export ZLIB_INCLUDES=${LIBSrnr}/include && \
+    export ZLIB_LIBRARIES=${LIBSrnr}/lib && \
+    export ZLIB_VERSION=1.2.11 && \
+    export COMP=ifort && \
+    export COMP_MP=mpfort && \
+    export COMP_MPI=mpiifort && \
+    export C_COMP=icc && \
+    export C_COMP_MP=mpcc && \
+    export MKL_NUM_THREADS=4 && \
+    export MKL_CBWR=AUTO && \
+    git submodule update --init --recursive && \
+    mkdir -p build && \
+    cd build && \
+    cmake -DBUILD_UTIL=ON -DBUILD_NCDIAG_SERIAL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ../ && \
+    make -j4
+
+WORKDIR /home/builder
+
